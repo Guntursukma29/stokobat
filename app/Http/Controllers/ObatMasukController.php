@@ -51,4 +51,19 @@ class ObatMasukController extends Controller
 
         return redirect()->route('obat-masuk.index')->with('success', 'Obat masuk berhasil dihapus.');
     }
+    public function search(Request $request)
+    {
+        $search = $request->q;
+        $obats = \App\Models\Obat::where('nama_obat', 'like', "%$search%")
+            ->select('id', 'nama_obat')
+            ->limit(20)
+            ->get();
+
+        return response()->json(
+            $obats->map(fn($o) => [
+                'id' => $o->id,
+                'text' => $o->nama_obat
+            ])
+        );
+    }
 }

@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ObatController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\JenisObatController;
+use App\Http\Controllers\ObatRusakController;
 use App\Http\Controllers\ObatKeluarController;
 use App\Http\Controllers\ObatKeluarDetailController;
 
@@ -26,9 +28,12 @@ Auth::routes();
 
 // Group untuk admin
 Route::middleware(['auth', 'role:admin'])->group(function () {
+
     Route::resource('obat-masuk', App\Http\Controllers\ObatMasukController::class);
     Route::resource('pasiens', App\Http\Controllers\PasienController::class);
     Route::get('/laporan/obat-keluar', [ObatKeluarDetailController::class, 'index'])->name('laporan.obat-keluar.index');
+    Route::get('/obat/search', [App\Http\Controllers\ObatController::class, 'search'])->name('obat.search');
+
     Route::resource('obat', ObatController::class);
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
@@ -36,6 +41,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::resource('obat-keluar', App\Http\Controllers\ObatKeluarController::class);
     Route::get('/obat-keluar/{id}/export-pdf', [ObatKeluarController::class, 'exportPdf'])->name('obat-keluar.export-pdf');
+    Route::resource('jenis-obat', JenisObatController::class);
+    Route::resource('obat-rusak', ObatRusakController::class);
+    // routes/web.php
+    // routes/web.php
 });
 
 // Group untuk poli

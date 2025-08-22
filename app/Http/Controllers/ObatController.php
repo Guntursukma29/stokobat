@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Obat;
+use App\Models\JenisObat;
 use Illuminate\Http\Request;
 
 class ObatController extends Controller
@@ -13,7 +14,8 @@ class ObatController extends Controller
     public function index()
     {
         $obats = Obat::orderBy('nama_obat')->get();
-        return view('obat.index', compact('obats'));
+        $jenisObat = JenisObat::all();
+        return view('obat.index', compact('obats', 'jenisObat'));
     }
 
     /**
@@ -32,18 +34,20 @@ class ObatController extends Controller
         $request->validate([
             'nama_obat' => 'required|string|max:255|unique:obats',
             'satuan' => 'required|string|max:50',
-            'stok_minimum' => 'required|integer|min:0'
+            'stok_minimum' => 'required|integer|min:0',
+            'jenis_obat_id' => 'required|exists:jenis_obat,id', // validasi relasi
         ]);
 
         Obat::create([
             'nama_obat' => $request->nama_obat,
             'satuan' => $request->satuan,
-            // 'stok' => 0,
-            'stok_minimum' => $request->stok_minimum
+            'stok_minimum' => $request->stok_minimum,
+            'jenis_obat_id' => $request->jenis_obat_id, // simpan relasi
         ]);
 
         return redirect()->route('obat.index')->with('success', 'Obat berhasil ditambahkan.');
     }
+
 
     /**
      * Form edit obat
@@ -76,5 +80,21 @@ class ObatController extends Controller
     {
         $obat->delete();
         return redirect()->route('obat.index')->with('success', 'Obat berhasil dihapus.');
+    }
+    public function search(Request $request)
+    {
+        $query = $request->get('q');
+        $obats = \App\Models\Obat::where('nama_obat', 'LIKE', "%$query%")
+            ->limit(20)
+            ->get();
+
+        return response()->json(
+            $obats->map(function ($obat) {
+                return [
+                    'id' => $obat->id,
+                    'text' => $obat->nama_obat,
+                ];
+            })
+        );
     }
 }

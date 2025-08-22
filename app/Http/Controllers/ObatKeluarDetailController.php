@@ -3,26 +3,27 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\Obat;
 use Carbon\CarbonPeriod;
-use App\Models\ObatMasuk;
 use Illuminate\Http\Request;
-use App\Models\ObatKeluarDetail;
 use Illuminate\Support\Facades\DB;
+use App\Models\Obat;
+use App\Models\ObatMasuk;
+use App\Models\ObatKeluarDetail;
+use App\Models\ObatRusak;
 
 class ObatKeluarDetailController extends Controller
 {
     public function index(Request $request)
     {
-        $tahun = $request->get('tahun');
-        $bulan = $request->get('bulan');
+        $tahun   = $request->get('tahun');
+        $bulan   = $request->get('bulan');
         $stokMin = $request->get('stok_minimum');
-        $tanggal = $request->get('tanggal'); // === TAMBAHAN FILTER TANGGAL ===
+        $tanggal = $request->get('tanggal');
 
-        // Jika filter tanggal dipilih, kita abaikan tahun/bulan supaya mode khusus harian_tanggal
+        // Tentukan mode laporan
         if ($tanggal) {
             $mode = 'harian_tanggal';
-            $tanggalObj = Carbon::parse($tanggal);
+            $tanggalObj   = Carbon::parse($tanggal);
             $tanggalAcuan = $tanggalObj->copy()->subDay()->toDateString();
         } else {
             if (!$tahun && !$bulan && !$stokMin) {
@@ -57,13 +58,19 @@ class ObatKeluarDetailController extends Controller
                 ->whereDate('created_at', '<=', $tanggalAcuan)
                 ->sum('jumlah');
 
-            return [$obat->id => $totalMasuk - $totalKeluar];
+            $totalRusak = ObatRusak::where('obat_id', $obat->id)
+                ->whereDate('tanggal', '<=', $tanggalAcuan)
+                ->sum('jumlah');
+
+            return [$obat->id => $totalMasuk - $totalKeluar - $totalRusak];
         });
 
-        $obats = Obat::all()->map(function ($obat) use ($stokMin, $stokAwal, $mode, $tahun, $bulan, $tanggal) {
+        // Ambil data obat + hitung stok sesuai mode
+        $obats = Obat::all()->map(function ($obat) use ($stokAwal, $mode, $tahun, $bulan, $tanggal) {
             $stokAkhirSebelumnya = $stokAwal[$obat->id] ?? 0;
 
             if ($mode === 'harian_tanggal') {
+                // === Mode Harian Berdasarkan Tanggal Pilihan ===
                 $masukPeriode = ObatMasuk::where('obat_id', $obat->id)
                     ->whereDate('tanggal_masuk', $tanggal)
                     ->sum('jumlah');
@@ -72,68 +79,67 @@ class ObatKeluarDetailController extends Controller
                     ->whereDate('created_at', $tanggal)
                     ->sum('jumlah');
 
+                $rusakPeriode = ObatRusak::where('obat_id', $obat->id)
+                    ->whereDate('tanggal', $tanggal)
+                    ->sum('jumlah');
+
                 $stokAwalPeriode = $stokAkhirSebelumnya;
-                $stokSisa = $stokAwalPeriode + $masukPeriode - $keluarPeriode;
+                $stokSisa = $stokAwalPeriode + $masukPeriode - $keluarPeriode - $rusakPeriode;
 
-                $permintaan = 0;
-                if (!is_null($obat->stok_minimum) && $stokSisa < $obat->stok_minimum) {
-                    $permintaan = $obat->stok_minimum - $stokSisa;
-                }
+                $permintaan = (!is_null($obat->stok_minimum) && $stokSisa < $obat->stok_minimum)
+                    ? $obat->stok_minimum - $stokSisa : 0;
 
-                $obat->stok_awal_tanggal = $stokAwalPeriode;
-                $obat->obat_masuk_tanggal = $masukPeriode;
+                $obat->stok_awal_tanggal   = $stokAwalPeriode;
+                $obat->obat_masuk_tanggal  = $masukPeriode;
                 $obat->obat_keluar_tanggal = $keluarPeriode;
-                $obat->stok_sisa_tanggal = $stokSisa;
-                $obat->permintaan_tanggal = $permintaan;
+                $obat->obat_rusak_tanggal  = $rusakPeriode;
+                $obat->stok_sisa_tanggal   = $stokSisa;
+                $obat->permintaan_tanggal  = $permintaan;
             } elseif ($mode === 'bulanan') {
-                // Inisialisasi tanggal awal dan akhir bulan
+                // === Mode Bulanan ===
                 $startDate = Carbon::create($tahun, $bulan, 1);
-                $endDate = $startDate->copy()->endOfMonth();
+                $endDate   = $startDate->copy()->endOfMonth();
+                $periode   = CarbonPeriod::create($startDate, $endDate);
 
-                // Buat periode tanggal dari tgl 1 sampai akhir bulan
-                $periode = CarbonPeriod::create($startDate, $endDate);
-
-                // Hitung total obat masuk di bulan itu
                 $masukPeriode = ObatMasuk::where('obat_id', $obat->id)
                     ->whereYear('tanggal_masuk', $tahun)
                     ->whereMonth('tanggal_masuk', $bulan)
                     ->sum('jumlah');
 
-                // Ambil data keluar per hari, dikelompokkan per tanggal (format Y-m-d)
                 $keluarPerHariRaw = ObatKeluarDetail::where('obat_id', $obat->id)
                     ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
                     ->get()
-                    ->groupBy(function ($item) {
-                        return $item->created_at->format('Y-m-d');
-                    });
+                    ->groupBy(fn($item) => $item->created_at->format('Y-m-d'));
 
-                // Buat array lengkap keluar per hari untuk tiap tanggal di bulan tersebut
                 $keluarPerHari = [];
                 foreach ($periode as $date) {
                     $dateStr = $date->format('Y-m-d');
-                    $keluarPerHari[$dateStr] = isset($keluarPerHariRaw[$dateStr]) ? $keluarPerHariRaw[$dateStr]->sum('jumlah') : 0;
+                    $keluarPerHari[$dateStr] = isset($keluarPerHariRaw[$dateStr])
+                        ? $keluarPerHariRaw[$dateStr]->sum('jumlah') : 0;
                 }
 
-                // Hitung stok sisa bulan ini:
-                // stok awal + masuk - total keluar
-                $stokAwalPeriode = $stokAkhirSebelumnya; // harus sudah ada stok akhir bulan sebelumnya
-                $totalKeluar = array_sum($keluarPerHari); // total keluar dari tanggal 1 sampai akhir bulan
-                $stokSisa = $stokAwalPeriode + $masukPeriode - $totalKeluar;
+                $totalKeluar = array_sum($keluarPerHari);
 
-                // Hitung permintaan jika stok sisa kurang dari stok minimum
-                $permintaan = 0;
-                if (!is_null($obat->stok_minimum) && $stokSisa < $obat->stok_minimum) {
-                    $permintaan = $obat->stok_minimum - $stokSisa;
-                }
+                $rusakPeriode = ObatRusak::where('obat_id', $obat->id)
+                    ->whereYear('tanggal', $tahun)
+                    ->whereMonth('tanggal', $bulan)
+                    ->sum('jumlah');
 
-                // Simpan ke properti obat untuk nanti dipakai di view
-                $obat->stok_awal_bulan_ini = $stokAwalPeriode;
-                $obat->obat_masuk_bulan_ini = $masukPeriode;
-                $obat->total_keluar_bulan_ini = $totalKeluar;  // total keluar sudah dihitung disini
-                $obat->stok_sisa_bulan_ini = $stokSisa;
-                $obat->permintaan = $permintaan;
-                $obat->keluar_per_hari = $keluarPerHari;
+                $stokAwalPeriode = $stokAkhirSebelumnya;
+                $stokSisa = $stokAwalPeriode + $masukPeriode - $totalKeluar - $rusakPeriode;
+
+                $permintaan = (!is_null($obat->stok_minimum) && $stokSisa < $obat->stok_minimum)
+                    ? $obat->stok_minimum - $stokSisa : 0;
+
+                $obat->stok_awal_bulan_ini   = $stokAwalPeriode;
+                $obat->obat_masuk_bulan_ini  = $masukPeriode;
+                $obat->total_keluar_bulan_ini = $totalKeluar;
+                $obat->obat_rusak_bulan_ini  = $rusakPeriode;
+                $obat->stok_sisa_bulan_ini   = $stokSisa;
+                $obat->permintaan            = $permintaan;
+                $obat->keluar_per_hari       = $keluarPerHari;
             } elseif ($mode === 'tahunan') {
+                // === Mode Tahunan ===
                 $masukPeriode = ObatMasuk::where('obat_id', $obat->id)
                     ->whereYear('tanggal_masuk', $tahun)
                     ->sum('jumlah');
@@ -142,13 +148,24 @@ class ObatKeluarDetailController extends Controller
                     ->whereYear('created_at', $tahun)
                     ->sum('jumlah');
 
-                $stokAwalPeriode = $stokAkhirSebelumnya;
-                $stokSisa = $stokAwalPeriode + $masukPeriode - $keluarPeriode;
+                $rusakPeriode = ObatRusak::where('obat_id', $obat->id)
+                    ->whereYear('tanggal', $tahun)
+                    ->sum('jumlah');
 
-                $obat->stok_awal_tahun_ini = $stokAwalPeriode;
-                $obat->obat_masuk_tahun_ini = $masukPeriode;
+                $stokAwalPeriode = $stokAkhirSebelumnya;
+                $stokSisa = $stokAwalPeriode + $masukPeriode - $keluarPeriode - $rusakPeriode;
+
+                $permintaan = (!is_null($obat->stok_minimum) && $stokSisa < $obat->stok_minimum)
+                    ? $obat->stok_minimum - $stokSisa : 0;
+
+                $obat->stok_awal_tahun_ini   = $stokAwalPeriode;
+                $obat->obat_masuk_tahun_ini  = $masukPeriode;
                 $obat->total_keluar_tahun_ini = $keluarPeriode;
-            } else { // hari_ini
+                $obat->obat_rusak_tahun_ini  = $rusakPeriode;
+                $obat->stok_sisa_tahun_ini   = $stokSisa;
+                $obat->permintaan            = $permintaan;
+            } else {
+                // === Mode Hari Ini ===
                 $masukPeriode = ObatMasuk::where('obat_id', $obat->id)
                     ->whereDate('tanggal_masuk', now()->toDateString())
                     ->sum('jumlah');
@@ -157,19 +174,33 @@ class ObatKeluarDetailController extends Controller
                     ->whereDate('created_at', now()->toDateString())
                     ->sum('jumlah');
 
-                $stokAwalPeriode = $stokAkhirSebelumnya + $masukPeriode;
-                $stokSisa = $stokAwalPeriode - $keluarPeriode;
+                $rusakPeriode = ObatRusak::where('obat_id', $obat->id)
+                    ->whereDate('tanggal', now()->toDateString())
+                    ->sum('jumlah');
 
-                $obat->stok_awal_hari_ini = $stokAwalPeriode;
-                $obat->obat_masuk_hari_ini = $masukPeriode;
+                $stokAwalPeriode = $stokAkhirSebelumnya;
+                $stokSisa = $stokAwalPeriode + $masukPeriode - $keluarPeriode - $rusakPeriode;
+
+                $permintaan = (!is_null($obat->stok_minimum) && $stokSisa < $obat->stok_minimum)
+                    ? $obat->stok_minimum - $stokSisa : 0;
+
+                $obat->stok_awal_hari_ini   = $stokAwalPeriode;
+                $obat->obat_masuk_hari_ini  = $masukPeriode;
                 $obat->total_keluar_hari_ini = $keluarPeriode;
+                $obat->obat_rusak_hari_ini  = $rusakPeriode;
+                $obat->stok_sisa_hari_ini   = $stokSisa;
+                $obat->permintaan           = $permintaan;
             }
+
+            // Properti umum utk filter stok minimum
+            $obat->stok_sisa = $stokSisa;
 
             return $obat;
         });
 
+        // Filter stok minimum (jika ada)
         if (!is_null($stokMin)) {
-            $obats = $obats->filter(fn($o) => $o->stok <= $stokMin);
+            $obats = $obats->filter(fn($o) => $o->stok_sisa <= $stokMin);
         }
 
         return view('obat.keluar_detail', compact('obats', 'tahun', 'bulan', 'stokMin', 'mode', 'tanggal'));

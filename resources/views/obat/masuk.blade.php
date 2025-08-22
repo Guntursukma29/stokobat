@@ -45,7 +45,7 @@
                                 <!-- Modal Edit -->
                                 <div class="modal fade" id="modalEditObatMasuk{{ $item->id }}" tabindex="-1"
                                     aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-dialog modal-dialog-centered">
                                         <form action="{{ route('obat-masuk.update', $item->id) }}" method="POST"
                                             class="w-100">
                                             @csrf
@@ -59,14 +59,8 @@
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label class="form-label">Nama Obat</label>
-                                                        <select name="obat_id" class="form-control" required>
-                                                            @foreach ($obats as $obat)
-                                                                <option value="{{ $obat->id }}"
-                                                                    {{ $obat->id == $item->obat_id ? 'selected' : '' }}>
-                                                                    {{ $obat->nama_obat }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
+                                                        <select name="obat_id" class="form-control select2-obat"
+                                                            data-selected="{{ $item->obat_id }}" required></select>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label">Jumlah</label>
@@ -111,7 +105,7 @@
 
     <!-- Modal Tambah -->
     <div class="modal fade" id="modalTambahObatMasuk" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-dialog modal-dialog-centered">
             <form action="{{ route('obat-masuk.store') }}" method="POST" class="w-100">
                 @csrf
                 <div class="modal-content">
@@ -122,12 +116,7 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nama Obat</label>
-                            <select name="obat_id" class="form-control" required>
-                                <option value="">-- Pilih Obat --</option>
-                                @foreach ($obats as $obat)
-                                    <option value="{{ $obat->id }}">{{ $obat->nama_obat }}</option>
-                                @endforeach
-                            </select>
+                            <select name="obat_id" class="form-control select2-obat" required></select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Jumlah</label>
@@ -151,3 +140,6 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+@endpush

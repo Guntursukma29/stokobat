@@ -14,17 +14,20 @@ class ObatKeluarController extends Controller
 {
     public function index()
     {
-        $obatKeluar = ObatKeluar::with('pasien', 'detail.obat')->latest()->get();
-        $obats = Obat::all();
-        $pasiens = Pasien::all();
-        return view('obat.keluar', compact('obatKeluar', 'obats', 'pasiens'));
+        // $obatKeluar = ObatKeluar::with('pasien', 'detail.obat')->latest()->get();
+        $obatKeluar = ObatKeluar::with('detail.obat')->latest()->get();
+        $obats = Obat::orderBy('jenis_obat_id')->orderBy('nama_obat')->get();
+        $jenisObats = $obats->groupBy('jenis_obat');
+        // $obats = Obat::all();
+        // $pasiens = Pasien::all();
+        return view('obat.keluar', compact('obatKeluar', 'obats', 'jenisObats'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'tanggal_keluar' => 'required|date',
-            'pasien_id' => 'required|exists:pasiens,id',
+            // 'pasien_id' => 'required|exists:pasiens,id',
             'obat_id' => 'required|array',
             'obat_id.*' => 'exists:obats,id',
             'jumlah.*' => 'required|integer|min:1'
@@ -34,7 +37,7 @@ class ObatKeluarController extends Controller
             // Simpan transaksi obat keluar
             $keluar = ObatKeluar::create([
                 'tanggal_keluar' => $request->tanggal_keluar,
-                'pasien_id' => $request->pasien_id
+                // 'pasien_id' => $request->pasien_id
             ]);
 
             // Simpan detail obat keluar & kurangi stok
@@ -61,7 +64,7 @@ class ObatKeluarController extends Controller
     {
         $keluar = ObatKeluar::with('details.obat')->findOrFail($id);
         $obats = Obat::all();
-        $pasiens = Pasien::all();
+        // $pasiens = Pasien::all();
         return view('obat.keluar_edit', compact('keluar', 'obats', 'pasiens'));
     }
 
@@ -69,7 +72,7 @@ class ObatKeluarController extends Controller
     {
         $request->validate([
             'tanggal_keluar' => 'required|date',
-            'pasien_id' => 'required|exists:pasiens,id',
+            // 'pasien_id' => 'required|exists:pasiens,id',
             'obat_id' => 'required|array',
             'obat_id.*' => 'exists:obats,id',
             'jumlah.*' => 'required|integer|min:1'
@@ -115,13 +118,13 @@ class ObatKeluarController extends Controller
 
     public function destroy($id)
     {
-        $keluar = ObatKeluar::with('details')->findOrFail($id);
-        foreach ($keluar->details as $detail) {
+        $keluar = ObatKeluar::with('detail')->findOrFail($id);
+        foreach ($keluar->detail as $detail) {
             $obat = Obat::find($detail->obat_id);
             $obat->stok += $detail->jumlah;
             $obat->save();
         }
-        $keluar->details()->delete();
+        $keluar->detail()->delete();
         $keluar->delete();
         return redirect()->route('obat-keluar.index')->with('success', 'Obat keluar berhasil dihapus');
     }  // alias Facade di bagian atas controller
@@ -136,5 +139,21 @@ class ObatKeluarController extends Controller
         $filename = 'Resep_Obat_' . $keluar->pasien->nama_pasien . '.pdf';
 
         return $pdf->download($filename);
+    }
+    public function search(Request $request)
+    {
+        $query = $request->get('q');
+        $obats = \App\Models\Obat::where('nama_obat', 'LIKE', "%$query%")
+            ->limit(20)
+            ->get();
+
+        return response()->json(
+            $obats->map(function ($obat) {
+                return [
+                    'id' => $obat->id,
+                    'text' => $obat->nama_obat . ' (Stok: ' . $obat->stok . ')',
+                ];
+            })
+        );
     }
 }

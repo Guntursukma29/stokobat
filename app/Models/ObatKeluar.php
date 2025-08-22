@@ -10,15 +10,15 @@ class ObatKeluar extends Model
     use HasFactory;
 
     protected $fillable = [
-        'pasien_id',
+        // 'pasien_id',
         'tanggal_keluar'
     ];
 
     // Relasi ke pasien
-    public function pasien()
-    {
-        return $this->belongsTo(Pasien::class);
-    }
+    // public function pasien()
+    // {
+    //     return $this->belongsTo(Pasien::class);
+    // }
 
     // Relasi ke detail obat keluar
     public function detail()

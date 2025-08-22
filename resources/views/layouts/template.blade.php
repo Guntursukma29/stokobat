@@ -67,16 +67,7 @@
                                     <script>
                                         document.write(new Date().getFullYear());
                                     </script>, made with ❤️ by
-                                    <a href="https://themeselection.com"
-                                        class="footer-link fw-bolder">ThemeSelection</a>
-                                </div>
-                                <div>
-                                    <a href="https://themeselection.com/license/" class="footer-link me-4">License</a>
-                                    <a href="https://themeselection.com/" class="footer-link me-4">More Themes</a>
-                                    <a href="https://themeselection.com/demo/sneat-bootstrap-html-admin-template/documentation/"
-                                        class="footer-link me-4">Documentation</a>
-                                    <a href="https://github.com/themeselection/sneat-html-admin-template-free/issues"
-                                        class="footer-link me-4">Support</a>
+                                    <a href="https://themeselection.com" class="footer-link fw-bolder">Nurrohman</a>
                                 </div>
                             </div>
                         </footer>
@@ -95,6 +86,10 @@
         <!-- / Layout wrapper -->
 
         <!-- Core JS -->
+        <!-- CSS Select2 -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Core JS (jQuery dari template) -->
         <script src="{{ asset('assets/vendor/libs/jquery/jquery.js') }}"></script>
         <script src="{{ asset('assets/vendor/libs/popper/popper.js') }}"></script>
         <script src="{{ asset('assets/vendor/js/bootstrap.js') }}"></script>
@@ -109,17 +104,130 @@
 
         <!-- Page JS -->
         <script src="{{ asset('assets/js/dashboards-analytics.js') }}"></script>
-        <!-- DataTables JS -->
+
+        <!-- DataTables -->
         <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+        <!-- Select2 (harus setelah jQuery) -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script>
             $(document).ready(function() {
                 $('#obatTable').DataTable();
                 $('#usersTable').DataTable();
+                $('#jenisObatTable').DataTable();
+                $('#obatRusakTable').DataTable();
             });
         </script>
+        <script>
+            $(document).ready(function() {
+                initSelect2($('.select-obat'));
 
+                window.tambahObat = function() {
+                    let html = `
+        <div class="row mb-2">
+            <div class="col-md-6">
+                <select name="obat_id[]" class="form-control select-obat" required></select>
+            </div>
+            <div class="col-md-4">
+                <input type="number" name="jumlah[]" class="form-control" placeholder="Jumlah" required>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger" onclick="this.closest('.row').remove()">-</button>
+            </div>
+        </div>`;
+                    $('#obatContainer').append(html);
 
+                    initSelect2($('#obatContainer .select-obat').last());
+                }
+
+                function initSelect2(el) {
+                    el.select2({
+                        dropdownParent: $('#modalTambahKeluar'),
+                        placeholder: '-- Cari Obat --',
+                        allowClear: true,
+                        ajax: {
+                            url: '{{ route('obat.search') }}',
+                            dataType: 'json',
+                            delay: 250,
+                            data: function(params) {
+                                return {
+                                    q: params.term // input dari user
+                                };
+                            },
+                            processResults: function(data) {
+                                return {
+                                    results: data // harus [{id:1, text:"Paracetamol"}, ...]
+                                };
+                            },
+                            cache: true
+                        },
+                        minimumInputLength: 1
+                    });
+                }
+            });
+        </script>
+        <script>
+            $(document).ready(function() {
+
+                function initSelect2(el, selectedId = null, modalParent = null) {
+                    el.select2({
+                        dropdownParent: modalParent ? $(modalParent) : $(document.body),
+                        theme: "bootstrap-5",
+                        placeholder: '-- Cari Obat --',
+                        allowClear: true,
+                        ajax: {
+                            url: "{{ route('obat.search') }}",
+                            dataType: 'json',
+                            delay: 250,
+                            data: function(params) {
+                                return {
+                                    q: params.term
+                                };
+                            },
+                            processResults: function(data) {
+                                return {
+                                    results: data.map(item => ({
+                                        id: item.id,
+                                        text: item.text || item.nama_obat
+                                    }))
+                                };
+                            }
+                        }
+                    });
+
+                    if (selectedId) {
+                        $.ajax({
+                            url: "{{ route('obat.search') }}",
+                            dataType: 'json',
+                            data: {
+                                q: ''
+                            },
+                            success: function(data) {
+                                let selected = data.find(x => x.id == selectedId);
+                                if (selected) {
+                                    let option = new Option(selected.text || selected.nama_obat, selected
+                                        .id, true, true);
+                                    el.append(option).trigger('change');
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Inisialisasi select2 di modal Tambah
+                initSelect2($('#modalTambahObatMasuk .select2-obat'), null, '#modalTambahObatMasuk');
+
+                // Inisialisasi select2 di setiap modal Edit
+                $('.modal').on('shown.bs.modal', function() {
+                    $(this).find('.select2-obat').each(function() {
+                        let selectedId = $(this).data('selected') || null;
+                        initSelect2($(this), selectedId, this.closest('.modal'));
+                    });
+                });
+            });
+        </script>
     </body>
 
 </html>

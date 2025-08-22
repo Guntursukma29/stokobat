@@ -22,6 +22,7 @@
                             <th>Nama Obat</th>
                             <th>Satuan</th>
                             {{-- <th>Stok</th> --}}
+                            <th>Jenis Obat</th>
                             <th>Stok Minimum</th>
                             <th>Aksi</th>
                         </tr>
@@ -32,6 +33,7 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $obat->nama_obat }}</td>
                                 <td>{{ $obat->satuan }}</td>
+                                <td>{{ $obat->jenisObat->nama }}</td>
                                 {{-- <td>{{ $obat->stok }}</td> --}}
                                 <td>{{ $obat->stok_minimum }}</td>
                                 <td>
@@ -64,8 +66,20 @@
                                                         </div>
                                                         <div class="mb-3">
                                                             <label for="satuan" class="form-label">Satuan</label>
-                                                            <input type="text" name="satuan" value="{{ $obat->satuan }}"
-                                                                class="form-control" required>
+                                                            <input type="text" name="satuan"
+                                                                value="{{ $obat->satuan }}" class="form-control" required>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="jenis_obat_id" class="form-label">Jenis Obat</label>
+                                                            <select name="jenis_obat_id" class="form-control" required>
+                                                                <option value="">-- Pilih Jenis Obat --</option>
+                                                                @foreach ($jenisObat as $jenis)
+                                                                    <option value="{{ $jenis->id }}"
+                                                                        {{ old('jenis_obat_id', $obat->jenis_obat_id) == $jenis->id ? 'selected' : '' }}>
+                                                                        {{ $jenis->nama }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
                                                         </div>
                                                         <div class="mb-3">
                                                             <label for="stok_minimum" class="form-label">Stok
@@ -118,6 +132,15 @@
                             <label for="satuan" class="form-label">Satuan</label>
                             <input type="text" name="satuan" class="form-control" placeholder="Contoh: Tablet, Botol"
                                 required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="jenis_obat_id" class="form-label">Jenis Obat</label>
+                            <select name="jenis_obat_id" id="jenis_obat_id" class="form-control" required>
+                                <option value="">-- Pilih Jenis Obat --</option>
+                                @foreach ($jenisObat as $jenis)
+                                    <option value="{{ $jenis->id }}">{{ $jenis->nama }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="stok_minimum" class="form-label">Stok Minimum</label>

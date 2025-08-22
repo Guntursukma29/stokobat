@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Obat extends Model
 {
     use HasFactory;
-
+    protected $table = 'obats';
     protected $fillable = [
         'nama_obat',
         'satuan',
         'stok',
-        'stok_minimum'
+        'stok_minimum',
+        'jenis_obat_id'
     ];
 
     // Relasi ke obat masuk
@@ -26,5 +27,13 @@ class Obat extends Model
     public function keluarDetail()
     {
         return $this->hasMany(ObatKeluarDetail::class);
+    }
+    public function jenisObat()
+    {
+        return $this->belongsTo(JenisObat::class, 'jenis_obat_id');
+    }
+    public function obatRusak()
+    {
+        return $this->hasMany(ObatRusak::class, 'obat_id');
     }
 }

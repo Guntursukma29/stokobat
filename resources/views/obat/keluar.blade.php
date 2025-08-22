@@ -19,7 +19,7 @@
                     <tr>
                         <th>#</th>
                         <th>Tanggal</th>
-                        <th>Pasien</th>
+                        {{-- <th>Pasien</th> --}}
                         <th>Detail Obat</th>
                         <th>Aksi</th>
                     </tr>
@@ -29,7 +29,7 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>{{ $keluar->tanggal_keluar }}</td>
-                            <td>{{ $keluar->pasien->nama_pasien }}</td>
+                            {{-- <td>{{ $keluar->pasien->nama_pasien }}</td> --}}
                             <td>
                                 <ul>
                                     @foreach ($keluar->detail as $detail)
@@ -60,10 +60,10 @@
 
     <!-- Modal Tambah -->
     <div class="modal fade" id="modalTambahKeluar" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <form method="POST" action="{{ route('obat-keluar.store') }}">
-                @csrf
-                <div class="modal-content">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ route('obat-keluar.store') }}" method="POST">
+                    @csrf
                     <div class="modal-header">
                         <h5 class="modal-title">Tambah Obat Keluar</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -73,24 +73,11 @@
                             <label>Tanggal Keluar</label>
                             <input type="date" name="tanggal_keluar" class="form-control" required>
                         </div>
-                        <div class="mb-3">
-                            <label>Pasien</label>
-                            <select name="pasien_id" class="form-control" required>
-                                <option value="">-- Pilih Pasien --</option>
-                                @foreach ($pasiens as $pasien)
-                                    <option value="{{ $pasien->id }}">{{ $pasien->nama_pasien }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+
                         <div id="obatContainer">
                             <div class="row mb-2">
                                 <div class="col-md-6">
-                                    <select name="obat_id[]" class="form-control" required>
-                                        <option value="">-- Pilih Obat --</option>
-                                        @foreach ($obats as $obat)
-                                            <option value="{{ $obat->id }}">{{ $obat->nama_obat }}</option>
-                                        @endforeach
-                                    </select>
+                                    <select name="obat_id[]" class="form-control select-obat" required></select>
                                 </div>
                                 <div class="col-md-4">
                                     <input type="number" name="jumlah[]" class="form-control" placeholder="Jumlah"
@@ -103,15 +90,16 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                         <button type="submit" class="btn btn-primary">Simpan</button>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
-    <script>
+
+    {{-- <script>
         function tambahObat() {
             let html = `
     <div class="row mb-2">
@@ -132,5 +120,5 @@
     </div>`;
             document.getElementById('obatContainer').insertAdjacentHTML('beforeend', html);
         }
-    </script>
+    </script> --}}
 @endsection

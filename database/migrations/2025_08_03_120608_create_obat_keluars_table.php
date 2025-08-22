@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('obat_keluars', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('pasien_id')->constrained()->onDelete('cascade');
+            // $table->foreignId('pasien_id')->constrained()->onDelete('cascade');
             $table->date('tanggal_keluar');
             $table->timestamps();
         });

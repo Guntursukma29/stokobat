@@ -68,12 +68,12 @@
             <li class="menu-header small text-uppercase">
                 <span class="menu-header-text">Pages</span>
             </li>
-            <li class="menu-item {{ Request::routeIs('pasiens.*') ? 'active' : '' }}">
+            {{-- <li class="menu-item {{ Request::routeIs('pasiens.*') ? 'active' : '' }}">
                 <a href="{{ route('pasiens.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-collection"></i>
                     <div data-i18n="Basic">Data Pasien</div>
                 </a>
-            </li>
+            </li> --}}
             <li
                 class="menu-item {{ Request::routeIs('obat.*', 'obat-masuk.*', 'obat-keluar.*') ? 'active open' : '' }}">
                 <a href="javascript:void(0);" class="menu-link menu-toggle">
@@ -81,6 +81,11 @@
                     <div data-i18n="Account Settings">Data Obat</div>
                 </a>
                 <ul class="menu-sub">
+                    <li class="menu-item {{ Request::routeIs('jenis-obat.*') ? 'active' : '' }}">
+                        <a href="{{ route('jenis-obat.index') }}" class="menu-link">
+                            <div data-i18n="Account">Jenis Obat</div>
+                        </a>
+                    </li>
                     <li class="menu-item {{ Request::routeIs('obat.*') ? 'active' : '' }}">
                         <a href="{{ route('obat.index') }}" class="menu-link">
                             <div data-i18n="Account">Obat</div>
@@ -89,6 +94,16 @@
                     <li class="menu-item {{ Request::routeIs('obat-masuk.*') ? 'active' : '' }}">
                         <a href="{{ route('obat-masuk.index') }}" class="menu-link">
                             <div data-i18n="Notifications">Obat Masuk</div>
+                        </a>
+                    </li>
+                    <li class="menu-item {{ Request::routeIs('obat-keluar.*') ? 'active' : '' }}">
+                        <a href="{{ route('obat-keluar.index') }}" class="menu-link">
+                            <div data-i18n="Basic">Obat Keluar</div>
+                        </a>
+                    </li>
+                    <li class="menu-item {{ Request::routeIs('obat-rusak.*') ? 'active' : '' }}">
+                        <a href="{{ route('obat-rusak.index') }}" class="menu-link">
+                            <div data-i18n="Basic">Obat Rusak</div>
                         </a>
                     </li>
                 </ul>
@@ -110,12 +125,7 @@
                 </a>
             </li>
             {{-- @elseif(auth()->user()->role === 'poli') --}}
-            <li class="menu-item {{ Request::routeIs('obat-keluar.*') ? 'active' : '' }}">
-                <a href="{{ route('obat-keluar.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-collection"></i>
-                    <div data-i18n="Basic">Obat Keluar</div>
-                </a>
-            </li>
+
             {{-- @endif --}}
 
             <!-- Logout (tampil untuk semua role) -->

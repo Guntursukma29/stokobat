@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('obats', function (Blueprint $table) {
             $table->id();
             $table->string('nama_obat');
+            $table->foreignId('jenis_obat_id')->constrained('jenis_obat')->onDelete('cascade');
             $table->string('satuan')->nullable();
             $table->integer('stok')->default(0)->nullable();
             $table->integer('stok_minimum')->default(0)->nullable();
